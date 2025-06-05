@@ -1,73 +1,135 @@
-# Welcome to your Lovable project
 
-## Project info
+# UNO Game - Full Stack MERN Application
 
-**URL**: https://lovable.dev/projects/25e78fe6-7dd9-4bd8-a809-d047e6659c0f
+A real-time multiplayer UNO card game built with React, Node.js, Express, and Socket.IO.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- **Real-time Multiplayer**: Play with 2-4 players in real-time
+- **Complete UNO Rules**: All card types, special actions, and game rules implemented
+- **Room System**: Create or join game rooms with unique codes
+- **Interactive UI**: Smooth animations and responsive design
+- **Turn Management**: Proper turn-based gameplay with validation
+- **UNO Calling**: Call UNO when you have one card left
+- **Wild Card Support**: Choose colors for wild cards with color picker
 
-**Use Lovable**
+## Tech Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/25e78fe6-7dd9-4bd8-a809-d047e6659c0f) and start prompting.
+### Frontend
+- React 18 with TypeScript
+- Socket.IO Client for real-time communication
+- Tailwind CSS for styling
+- Responsive design for all devices
 
-Changes made via Lovable will be committed automatically to this repo.
+### Backend
+- Node.js with Express
+- Socket.IO for real-time multiplayer
+- In-memory game state management
+- Complete UNO game logic implementation
 
-**Use your preferred IDE**
+## Getting Started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Prerequisites
+- Node.js (v14 or higher)
+- npm or yarn
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Installation
 
-Follow these steps:
+1. **Install frontend dependencies:**
+   ```bash
+   npm install
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+2. **Install backend dependencies:**
+   ```bash
+   cd server
+   npm install
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Running the Application
 
-# Step 3: Install the necessary dependencies.
-npm i
+1. **Start the backend server:**
+   ```bash
+   cd server
+   npm start
+   ```
+   The server will run on http://localhost:5000
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+2. **Start the frontend development server:**
+   ```bash
+   npm run dev
+   ```
+   The frontend will run on http://localhost:8080
+
+### How to Play
+
+1. **Create or Join a Room:**
+   - Enter your name
+   - Create a new room or join with a room code
+   - Wait for 2-4 players to join
+
+2. **Game Rules:**
+   - Each player starts with 7 cards
+   - Match color, number, or action with the top card
+   - Special cards: Skip, Reverse, Draw 2, Wild, Wild Draw 4
+   - Call "UNO" when you have one card left
+   - First player to play all cards wins!
+
+3. **Controls:**
+   - Click a card to play it
+   - Click "DRAW" to draw a card when you can't play
+   - Click "UNO!" to call UNO when you have one card
+   - For wild cards, choose a color from the color picker
+
+## Game Features
+
+### Card Types
+- **Number Cards (0-9)**: Match color or number
+- **Skip**: Skip the next player's turn
+- **Reverse**: Reverse the direction of play
+- **Draw 2**: Next player draws 2 cards and loses turn
+- **Wild**: Choose any color to continue
+- **Wild Draw 4**: Choose color, next player draws 4 cards
+
+### Special Rules
+- Draw 2 and Draw 4 cards stack
+- Reverse in 2-player game acts as Skip
+- Must call UNO when down to one card
+- Automatic win detection
+
+## Development
+
+### Project Structure
+```
+src/
+├── components/
+│   ├── UnoGame.tsx        # Main game component
+│   ├── GameBoard.tsx      # Game board and status
+│   ├── PlayerHand.tsx     # Player's hand display
+│   ├── UnoCard.tsx        # Individual card component
+│   └── GameLobby.tsx      # Room creation/joining
+├── types/
+│   └── uno.ts             # TypeScript interfaces
+└── pages/
+    └── Index.tsx          # Main page
+
+server/
+├── index.js               # Express server with Socket.IO
+└── package.json           # Backend dependencies
 ```
 
-**Edit a file directly in GitHub**
+### Future Enhancements
+- MongoDB integration for persistent game state
+- Player statistics and leaderboards
+- Tournament mode
+- Chat system
+- Sound effects and animations
+- Mobile app version
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Contributing
 
-**Use GitHub Codespaces**
+Feel free to contribute to this project by submitting issues or pull requests!
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## License
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/25e78fe6-7dd9-4bd8-a809-d047e6659c0f) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+This project is open source and available under the MIT License.
