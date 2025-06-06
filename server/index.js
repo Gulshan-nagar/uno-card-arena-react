@@ -1,4 +1,3 @@
-
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -8,12 +7,16 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:8080",
-    methods: ["GET", "POST"]
+    origin: ["http://localhost:8080", "http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:8080"],
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:8080", "http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:8080"],
+  credentials: true
+}));
 app.use(express.json());
 
 // Game state storage (in production, use MongoDB)
@@ -245,31 +248,51 @@ io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
 
   socket.on('createRoom', ({ playerName }) => {
-    const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const game = new UnoGame(roomId);
-    game.addPlayer(socket.id, playerName);
-    gameRooms.set(roomId, game);
-    players.set(socket.id, { roomId, playerName });
-    
-    socket.join(roomId);
-    socket.emit('roomCreated', { roomId, game: game.getGameState() });
-    socket.emit('handUpdate', game.getPlayerHand(socket.id));
+    try {
+      console.log('Creating room for player:', playerName);
+      const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const game = new UnoGame(roomId);
+      
+      if (game.addPlayer(socket.id, playerName)) {
+        gameRooms.set(roomId, game);
+        players.set(socket.id, { roomId, playerName });
+        
+        socket.join(roomId);
+        console.log('Room created successfully:', roomId);
+        socket.emit('roomCreated', { roomId, game: game.getGameState() });
+        socket.emit('handUpdate', game.getPlayerHand(socket.id));
+      } else {
+        socket.emit('error', 'Failed to create room');
+      }
+    } catch (error) {
+      console.error('Error creating room:', error);
+      socket.emit('error', 'Failed to create room');
+    }
   });
 
   socket.on('joinRoom', ({ roomId, playerName }) => {
-    const game = gameRooms.get(roomId);
-    if (!game) {
-      socket.emit('error', 'Room not found');
-      return;
-    }
+    try {
+      console.log('Player', playerName, 'attempting to join room:', roomId);
+      const game = gameRooms.get(roomId);
+      if (!game) {
+        console.log('Room not found:', roomId);
+        socket.emit('error', 'Room not found');
+        return;
+      }
 
-    if (game.addPlayer(socket.id, playerName)) {
-      players.set(socket.id, { roomId, playerName });
-      socket.join(roomId);
-      io.to(roomId).emit('gameUpdate', game.getGameState());
-      socket.emit('handUpdate', game.getPlayerHand(socket.id));
-    } else {
-      socket.emit('error', 'Room is full');
+      if (game.addPlayer(socket.id, playerName)) {
+        players.set(socket.id, { roomId, playerName });
+        socket.join(roomId);
+        console.log('Player joined successfully:', playerName, 'to room:', roomId);
+        io.to(roomId).emit('gameUpdate', game.getGameState());
+        socket.emit('handUpdate', game.getPlayerHand(socket.id));
+      } else {
+        console.log('Room is full:', roomId);
+        socket.emit('error', 'Room is full');
+      }
+    } catch (error) {
+      console.error('Error joining room:', error);
+      socket.emit('error', 'Failed to join room');
     }
   });
 
@@ -345,4 +368,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('CORS enabled for multiple origins');
 });

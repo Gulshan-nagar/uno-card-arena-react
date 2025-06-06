@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
 import GameBoard from './GameBoard';
@@ -16,28 +15,56 @@ const UnoGame: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
   const [pendingWildCard, setPendingWildCard] = useState<number | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:5000');
+    console.log('Attempting to connect to server...');
+    const newSocket = io('http://localhost:5000', {
+      transports: ['websocket', 'polling'],
+      timeout: 10000,
+    });
+    
     setSocket(newSocket);
 
+    newSocket.on('connect', () => {
+      console.log('Connected to server:', newSocket.id);
+      setIsConnected(true);
+      setError('');
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.log('Connection error:', error);
+      setIsConnected(false);
+      setError('Failed to connect to game server. Please make sure the server is running on port 5000.');
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from server');
+      setIsConnected(false);
+    });
+
     newSocket.on('roomCreated', ({ roomId, game }) => {
+      console.log('Room created:', roomId);
       setRoomId(roomId);
       setGameState(game);
       setIsInGame(true);
+      setError('');
     });
 
     newSocket.on('gameUpdate', (game: GameState) => {
+      console.log('Game update received:', game);
       setGameState(game);
     });
 
     newSocket.on('handUpdate', (hand: Card[]) => {
+      console.log('Hand update received:', hand);
       setPlayerHand(hand);
     });
 
     newSocket.on('error', (errorMessage: string) => {
+      console.log('Game error:', errorMessage);
       setError(errorMessage);
-      setTimeout(() => setError(''), 3000);
+      setTimeout(() => setError(''), 5000);
     });
 
     newSocket.on('gameWon', ({ winner }) => {
@@ -45,16 +72,27 @@ const UnoGame: React.FC = () => {
     });
 
     return () => {
+      console.log('Cleaning up socket connection');
       newSocket.close();
     };
   }, []);
 
   const createRoom = (name: string) => {
+    console.log('Creating room for player:', name);
+    if (!isConnected) {
+      setError('Not connected to server. Please refresh and try again.');
+      return;
+    }
     setPlayerName(name);
     socket?.emit('createRoom', { playerName: name });
   };
 
   const joinRoom = (roomId: string, name: string) => {
+    console.log('Joining room:', roomId, 'with player:', name);
+    if (!isConnected) {
+      setError('Not connected to server. Please refresh and try again.');
+      return;
+    }
     setPlayerName(name);
     socket?.emit('joinRoom', { roomId, playerName: name });
     setIsInGame(true);
@@ -91,6 +129,23 @@ const UnoGame: React.FC = () => {
       playCard(pendingWildCard, color);
     }
   };
+
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-600 via-yellow-500 to-blue-600 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Connecting to Server...</h1>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 mb-4">Please make sure the game server is running on port 5000.</p>
+          {error && (
+            <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (!isInGame) {
     return (
