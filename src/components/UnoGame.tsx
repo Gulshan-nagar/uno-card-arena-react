@@ -16,12 +16,17 @@ const UnoGame: React.FC = () => {
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
   const [pendingWildCard, setPendingWildCard] = useState<number | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
     console.log('Attempting to connect to server...');
     const newSocket = io('http://localhost:5000', {
       transports: ['websocket', 'polling'],
       timeout: 10000,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
     });
     
     setSocket(newSocket);
@@ -38,9 +43,14 @@ const UnoGame: React.FC = () => {
       setError('Failed to connect to game server. Please make sure the server is running on port 5000.');
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from server');
-      setIsConnected(false);
+    newSocket.on('reconnect_attempt', (attemptNumber) => {
+      console.log(`Reconnection attempt ${attemptNumber}`);
+      setError(`Attempting to reconnect... (${attemptNumber}/5)`);
+    });
+
+    newSocket.on('reconnect_failed', () => {
+      console.log('Failed to reconnect');
+      setError('Failed to reconnect to server. Please refresh the page.');
     });
 
     newSocket.on('roomCreated', ({ roomId, game }) => {
@@ -77,32 +87,38 @@ const UnoGame: React.FC = () => {
     };
   }, []);
 
-  const createRoom = (name: string) => {
+  const createRoom = async (name: string) => {
     console.log('Creating room for player:', name);
     if (!isConnected) {
       setError('Not connected to server. Please refresh and try again.');
       return;
     }
+    setIsLoading(true);
     setPlayerName(name);
     socket?.emit('createRoom', { playerName: name });
+    setIsLoading(false);
   };
 
-  const joinRoom = (roomId: string, name: string) => {
+  const joinRoom = async (roomId: string, name: string) => {
     console.log('Joining room:', roomId, 'with player:', name);
     if (!isConnected) {
       setError('Not connected to server. Please refresh and try again.');
       return;
     }
+    setIsLoading(true);
     setPlayerName(name);
     socket?.emit('joinRoom', { roomId, playerName: name });
     setIsInGame(true);
+    setIsLoading(false);
   };
 
-  const startGame = () => {
+  const startGame = async () => {
+    setIsLoading(true);
     socket?.emit('startGame');
+    setIsLoading(false);
   };
 
-  const playCard = (cardIndex: number, chosenColor?: string) => {
+  const playCard = async (cardIndex: number, chosenColor?: string) => {
     const card = playerHand[cardIndex];
     
     if (card.type === 'wild' && !chosenColor) {
@@ -111,17 +127,23 @@ const UnoGame: React.FC = () => {
       return;
     }
 
+    setIsLoading(true);
     socket?.emit('playCard', { cardIndex, chosenColor });
     setShowColorPicker(false);
     setPendingWildCard(null);
+    setIsLoading(false);
   };
 
-  const drawCard = () => {
+  const drawCard = async () => {
+    setIsLoading(true);
     socket?.emit('drawCard');
+    setIsLoading(false);
   };
 
-  const callUno = () => {
+  const callUno = async () => {
+    setIsLoading(true);
     socket?.emit('callUno');
+    setIsLoading(false);
   };
 
   const selectColor = (color: string) => {
@@ -163,6 +185,15 @@ const UnoGame: React.FC = () => {
         {error && (
           <div className="mb-4 p-4 bg-red-500 text-white rounded-lg">
             {error}
+          </div>
+        )}
+        
+        {isLoading && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p>Processing...</p>
+            </div>
           </div>
         )}
         
@@ -221,15 +252,34 @@ const UnoGame: React.FC = () => {
             <div className="bg-white p-6 rounded-lg">
               <h3 className="text-xl mb-4">Choose a color:</h3>
               <div className="grid grid-cols-2 gap-4">
-                {['red', 'blue', 'green', 'yellow'].map(color => (
-                  <button
-                    key={color}
-                    onClick={() => selectColor(color)}
-                    className={`w-20 h-20 rounded-lg border-4 border-gray-300 hover:border-gray-500 transition-colors bg-${color}-500`}
-                  >
-                    <span className="text-white font-bold capitalize">{color}</span>
-                  </button>
-                ))}
+                <button
+                  onClick={() => selectColor('red')}
+                  className="w-20 h-20 rounded-lg border-4 border-gray-300 hover:border-gray-500 transition-colors"
+                  style={{ backgroundColor: '#EF4444' }}
+                >
+                  <span className="text-white font-bold">Red</span>
+                </button>
+                <button
+                  onClick={() => selectColor('blue')}
+                  className="w-20 h-20 rounded-lg border-4 border-gray-300 hover:border-gray-500 transition-colors"
+                  style={{ backgroundColor: '#3B82F6' }}
+                >
+                  <span className="text-white font-bold">Blue</span>
+                </button>
+                <button
+                  onClick={() => selectColor('green')}
+                  className="w-20 h-20 rounded-lg border-4 border-gray-300 hover:border-gray-500 transition-colors"
+                  style={{ backgroundColor: '#10B981' }}
+                >
+                  <span className="text-white font-bold">Green</span>
+                </button>
+                <button
+                  onClick={() => selectColor('yellow')}
+                  className="w-20 h-20 rounded-lg border-4 border-gray-300 hover:border-gray-500 transition-colors"
+                  style={{ backgroundColor: '#F59E0B' }}
+                >
+                  <span className="text-white font-bold">Yellow</span>
+                </button>
               </div>
             </div>
           </div>

@@ -2,6 +2,14 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const dotenv = require('dotenv');
+const connectDB = require('./config/db');
+
+// Load env vars
+dotenv.config();
+
+// Connect to database
+connectDB();
 
 const app = express();
 const server = http.createServer(app);
@@ -245,8 +253,6 @@ class UnoGame {
 
 // Socket event handlers
 io.on('connection', (socket) => {
-  console.log('New client connected:', socket.id);
-
   socket.on('createRoom', ({ playerName }) => {
     try {
       console.log('Creating room for player:', playerName);
@@ -360,7 +366,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
     players.delete(socket.id);
   });
 });
