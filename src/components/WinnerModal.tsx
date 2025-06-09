@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { star } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 interface WinnerModalProps {
   winnerName: string;
@@ -15,7 +14,7 @@ const WinnerModal: React.FC<WinnerModalProps> = ({ winnerName, onClose }) => {
         
         <div className="relative z-10">
           <div className="mb-6">
-            <star className="w-16 h-16 text-yellow-200 mx-auto mb-4 animate-bounce" />
+            <Star className="w-16 h-16 text-yellow-200 mx-auto mb-4 animate-bounce" />
             <h2 className="text-3xl font-bold text-white mb-2">🎉 WINNER! 🎉</h2>
             <p className="text-xl text-white/90 font-semibold">{winnerName}</p>
           </div>

@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { help } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 
 const Tutorial: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,7 +11,7 @@ const Tutorial: React.FC = () => {
         className="fixed top-4 right-4 z-40 w-12 h-12 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110"
         title="Game Rules"
       >
-        <help size={24} />
+        <HelpCircle size={24} />
       </button>
 
       {isOpen && (
