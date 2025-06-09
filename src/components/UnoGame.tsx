@@ -5,7 +5,14 @@ import PlayerHand from './PlayerHand';
 import GameLobby from './GameLobby';
 import Tutorial from './Tutorial';
 import WinnerModal from './WinnerModal';
+import ChatSystem from './ChatSystem';
+import SpectatorMode from './SpectatorMode';
+import GameHistory from './GameHistory';
+import PlayerProfile from './PlayerProfile';
+import GameModes from './GameModes';
+import ReconnectionHandler from './ReconnectionHandler';
 import { Card, GameState, Player } from '../types/uno';
+import { History, User, MessageCircle, Eye } from 'lucide-react';
 
 const UnoGame: React.FC = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -21,6 +28,16 @@ const UnoGame: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [adminId, setAdminId] = useState<string>('');
   const [winner, setWinner] = useState<string | null>(null);
+  
+  // New feature states
+  const [isChatCollapsed, setIsChatCollapsed] = useState(true);
+  const [isSpectator, setIsSpectator] = useState(false);
+  const [spectators, setSpectators] = useState<Array<{ id: string; name: string }>>([]);
+  const [showGameHistory, setShowGameHistory] = useState(false);
+  const [showPlayerProfile, setShowPlayerProfile] = useState(false);
+  const [selectedGameMode, setSelectedGameMode] = useState('classic');
+  const [showGameModes, setShowGameModes] = useState(false);
+  const [customRules, setCustomRules] = useState<any>(null);
 
   useEffect(() => {
     console.log('Attempting to connect to server...');
@@ -63,7 +80,7 @@ const UnoGame: React.FC = () => {
       setGameState(game);
       setIsInGame(true);
       setError('');
-      setAdminId(newSocket.id || ''); // Creator is admin
+      setAdminId(newSocket.id || '');
     });
 
     newSocket.on('gameUpdate', (game: GameState) => {
@@ -87,6 +104,10 @@ const UnoGame: React.FC = () => {
       setWinner(winnerName);
     });
 
+    newSocket.on('spectatorsUpdate', (spectatorList: Array<{ id: string; name: string }>) => {
+      setSpectators(spectatorList);
+    });
+
     return () => {
       console.log('Cleaning up socket connection');
       newSocket.close();
@@ -101,7 +122,7 @@ const UnoGame: React.FC = () => {
     }
     setIsLoading(true);
     setPlayerName(name);
-    socket?.emit('createRoom', { playerName: name });
+    socket?.emit('createRoom', { playerName: name, gameMode: selectedGameMode, customRules });
     setIsLoading(false);
   };
 
@@ -114,6 +135,20 @@ const UnoGame: React.FC = () => {
     setIsLoading(true);
     setPlayerName(name);
     socket?.emit('joinRoom', { roomId, playerName: name });
+    setIsInGame(true);
+    setIsLoading(false);
+  };
+
+  const spectateGame = async (roomId: string, name: string) => {
+    console.log('Spectating room:', roomId, 'with name:', name);
+    if (!isConnected) {
+      setError('Not connected to server. Please refresh and try again.');
+      return;
+    }
+    setIsLoading(true);
+    setPlayerName(name);
+    setIsSpectator(true);
+    socket?.emit('spectateGame', { roomId, spectatorName: name });
     setIsInGame(true);
     setIsLoading(false);
   };
@@ -165,7 +200,11 @@ const UnoGame: React.FC = () => {
 
   const closeWinnerModal = () => {
     setWinner(null);
-    // Optionally reset game state or return to lobby
+  };
+
+  const handleReconnect = () => {
+    // Handle reconnection logic
+    console.log('Reconnecting to game...');
   };
 
   if (!isConnected) {
@@ -189,11 +228,57 @@ const UnoGame: React.FC = () => {
     return (
       <>
         <Tutorial />
-        <GameLobby 
-          onCreateRoom={createRoom}
-          onJoinRoom={joinRoom}
-          error={error}
-        />
+        {showGameModes ? (
+          <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4 flex items-center justify-center">
+            <div className="max-w-4xl w-full">
+              <GameModes
+                selectedMode={selectedGameMode}
+                onModeSelect={(mode) => {
+                  setSelectedGameMode(mode);
+                  setShowGameModes(false);
+                }}
+                onCustomRules={setCustomRules}
+              />
+            </div>
+          </div>
+        ) : (
+          <GameLobby 
+            onCreateRoom={(name) => {
+              setShowGameModes(true);
+              setPlayerName(name);
+              // Don't create room yet, wait for game mode selection
+            }}
+            onJoinRoom={joinRoom}
+            onSpectateGame={spectateGame}
+            error={error}
+            onShowGameHistory={() => setShowGameHistory(true)}
+            onShowPlayerProfile={() => setShowPlayerProfile(true)}
+          />
+        )}
+        
+        {/* Show player profile modal */}
+        {showPlayerProfile && (
+          <PlayerProfile
+            playerId={socket?.id || ''}
+            playerName={playerName || 'Guest'}
+            isOwn={true}
+            isOpen={showPlayerProfile}
+            onClose={() => setShowPlayerProfile(false)}
+            onUpdateProfile={(data) => {
+              setPlayerName(data.name);
+            }}
+          />
+        )}
+        
+        {/* Show game history modal */}
+        {showGameHistory && (
+          <GameHistory
+            socket={socket}
+            playerId={socket?.id || ''}
+            isOpen={showGameHistory}
+            onClose={() => setShowGameHistory(false)}
+          />
+        )}
       </>
     );
   }
@@ -209,6 +294,56 @@ const UnoGame: React.FC = () => {
       </div>
 
       <Tutorial />
+      
+      {/* Reconnection Handler */}
+      <ReconnectionHandler
+        socket={socket}
+        isConnected={isConnected}
+        onReconnect={handleReconnect}
+        playerName={playerName}
+        roomId={roomId}
+      />
+      
+      {/* Game Tools Bar */}
+      <div className="fixed top-16 right-4 flex flex-col gap-2 z-40">
+        <button
+          onClick={() => setIsChatCollapsed(!isChatCollapsed)}
+          className="w-10 h-10 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg"
+          title="Game Chat"
+        >
+          <MessageCircle size={20} />
+        </button>
+        <button
+          onClick={() => setShowPlayerProfile(true)}
+          className="w-10 h-10 bg-purple-500 hover:bg-purple-600 text-white rounded-full flex items-center justify-center shadow-lg"
+          title="Player Profile"
+        >
+          <User size={20} />
+        </button>
+        <button
+          onClick={() => setShowGameHistory(true)}
+          className="w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg"
+          title="Game History"
+        >
+          <History size={20} />
+        </button>
+        {!isSpectator && (
+          <button
+            onClick={() => {
+              socket?.emit('toggleSpectate', {
+                roomId,
+                playerName,
+                spectate: true
+              });
+              setIsSpectator(true);
+            }}
+            className="w-10 h-10 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full flex items-center justify-center shadow-lg"
+            title="Switch to Spectator"
+          >
+            <Eye size={20} />
+          </button>
+        )}
+      </div>
       
       <div className="max-w-6xl mx-auto relative z-10">
         {error && (
@@ -231,6 +366,7 @@ const UnoGame: React.FC = () => {
             <div className="mb-4 text-center">
               <h1 className="text-5xl font-bold text-white mb-2 drop-shadow-lg">🎮 UNO Arena 🎮</h1>
               <p className="text-white/80 text-lg">Room: <span className="font-mono bg-white/20 px-2 py-1 rounded">{roomId}</span></p>
+              <p className="text-white/80 text-md">Game Mode: <span className="font-semibold text-yellow-300">{selectedGameMode.charAt(0).toUpperCase() + selectedGameMode.slice(1)}</span></p>
               {!gameState.gameStarted && gameState.players.length >= 2 && socket?.id === adminId && (
                 <button
                   onClick={startGame}
@@ -244,7 +380,7 @@ const UnoGame: React.FC = () => {
               )}
             </div>
 
-            {gameState.gameStarted && (
+            {gameState.gameStarted && !isSpectator && (
               <>
                 <GameBoard 
                   gameState={gameState}
@@ -263,6 +399,14 @@ const UnoGame: React.FC = () => {
                   topCard={gameState.topCard}
                 />
               </>
+            )}
+
+            {gameState.gameStarted && isSpectator && (
+              <SpectatorMode
+                gameState={gameState}
+                spectators={spectators}
+                currentPlayerId={socket?.id}
+              />
             )}
 
             {!gameState.gameStarted && (
@@ -285,12 +429,21 @@ const UnoGame: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                  <p className="mt-4 text-white/70">Need at least 2 players to start • Maximum 4 players</p>
+                  <p className="mt-4 text-white/70">Need at least 2 players to start</p>
                 </div>
               </div>
             )}
           </>
         )}
+
+        {/* Chat System */}
+        <ChatSystem
+          socket={socket}
+          roomId={roomId}
+          playerName={playerName}
+          isCollapsed={isChatCollapsed}
+          onToggle={() => setIsChatCollapsed(!isChatCollapsed)}
+        />
 
         {/* Color Picker Modal */}
         {showColorPicker && (
@@ -323,6 +476,27 @@ const UnoGame: React.FC = () => {
           <WinnerModal 
             winnerName={winner}
             onClose={closeWinnerModal}
+          />
+        )}
+
+        {/* Player Profile Modal */}
+        {showPlayerProfile && (
+          <PlayerProfile
+            playerId={socket?.id || ''}
+            playerName={playerName}
+            isOwn={true}
+            isOpen={showPlayerProfile}
+            onClose={() => setShowPlayerProfile(false)}
+          />
+        )}
+        
+        {/* Game History Modal */}
+        {showGameHistory && (
+          <GameHistory
+            socket={socket}
+            playerId={socket?.id || ''}
+            isOpen={showGameHistory}
+            onClose={() => setShowGameHistory(false)}
           />
         )}
       </div>
