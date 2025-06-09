@@ -4,12 +4,19 @@ import { Card } from '../types/uno';
 
 interface UnoCardProps {
   card: Card;
-  isPlayable: boolean;
-  onClick: () => void;
+  isPlayable?: boolean;
+  onClick?: () => void;
   isHighlighted?: boolean;
+  size?: 'small' | 'medium' | 'large';
 }
 
-const UnoCard: React.FC<UnoCardProps> = ({ card, isPlayable, onClick, isHighlighted = false }) => {
+const UnoCard: React.FC<UnoCardProps> = ({ 
+  card, 
+  isPlayable = true, 
+  onClick, 
+  isHighlighted = false,
+  size = 'medium'
+}) => {
   const getCardColor = () => {
     if (card.type === 'wild') {
       return card.chosenColor || 'black';
@@ -38,11 +45,35 @@ const UnoCard: React.FC<UnoCardProps> = ({ card, isPlayable, onClick, isHighligh
     return '';
   };
 
+  const getSizeStyles = () => {
+    switch (size) {
+      case 'small':
+        return 'w-12 h-18 md:w-14 md:h-20';
+      case 'large':
+        return 'w-20 h-32 md:w-24 md:h-36';
+      case 'medium':
+      default:
+        return 'w-16 h-24 md:w-20 md:h-28';
+    }
+  };
+
+  const getTextSizeStyles = () => {
+    switch (size) {
+      case 'small':
+        return card.type === 'wild' || card.type === 'action' ? 'text-xs md:text-sm' : 'text-sm md:text-lg';
+      case 'large':
+        return card.type === 'wild' || card.type === 'action' ? 'text-lg md:text-2xl' : 'text-2xl md:text-4xl';
+      case 'medium':
+      default:
+        return card.type === 'wild' || card.type === 'action' ? 'text-sm md:text-lg' : 'text-xl md:text-3xl';
+    }
+  };
+
   const getCardStyles = () => {
     const cardColor = getCardColor();
     
     const baseStyles = `
-      w-16 h-24 md:w-20 md:h-28 rounded-xl border-3 
+      ${getSizeStyles()} rounded-xl border-3 
       flex items-center justify-center text-white font-bold
       transition-all duration-300 select-none relative
       shadow-lg backdrop-blur-sm
@@ -75,7 +106,7 @@ const UnoCard: React.FC<UnoCardProps> = ({ card, isPlayable, onClick, isHighligh
 
   return (
     <div
-      onClick={isPlayable ? onClick : undefined}
+      onClick={isPlayable && onClick ? onClick : undefined}
       className={getCardStyles()}
     >
       {/* Card background pattern */}
@@ -83,7 +114,7 @@ const UnoCard: React.FC<UnoCardProps> = ({ card, isPlayable, onClick, isHighligh
       
       {/* Card content */}
       <div className="text-center relative z-10">
-        <div className={`${card.type === 'wild' || card.type === 'action' ? 'text-sm md:text-lg' : 'text-xl md:text-3xl'} font-black drop-shadow-lg`}>
+        <div className={`${getTextSizeStyles()} font-black drop-shadow-lg`}>
           {getCardContent()}
         </div>
         {card.type === 'wild' && card.chosenColor && (
