@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card } from '../types/uno';
 import UnoCard from './UnoCard';
-import { arrow-down } from 'lucide-react';
+import { ArrowDown } from 'lucide-react';
 
 interface PlayerHandProps {
   cards: Card[];
@@ -68,9 +68,9 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
       {isCurrentPlayer && !hasPlayableCards && (
         <div className="text-center">
           <div className="inline-flex items-center gap-2 bg-red-500/80 text-white px-4 py-2 rounded-full font-bold animate-bounce">
-            <arrow-down className="w-5 h-5" />
+            <ArrowDown className="w-5 h-5" />
             Draw a card from the deck!
-            <arrow-down className="w-5 h-5" />
+            <ArrowDown className="w-5 h-5" />
           </div>
         </div>
       )}
