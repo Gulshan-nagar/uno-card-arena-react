@@ -20,7 +20,7 @@ const UnoGame: React.FC = () => {
 
   useEffect(() => {
     console.log('Attempting to connect to server...');
-    const newSocket = io('http://localhost:5000', {
+    const newSocket = io('https://uno-card-arena-react.onrender.com', {
       transports: ['websocket', 'polling'],
       timeout: 10000,
       reconnection: true,
