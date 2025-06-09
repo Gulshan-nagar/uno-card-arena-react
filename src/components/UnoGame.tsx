@@ -38,6 +38,7 @@ const UnoGame: React.FC = () => {
   const [selectedGameMode, setSelectedGameMode] = useState('classic');
   const [showGameModes, setShowGameModes] = useState(false);
   const [customRules, setCustomRules] = useState<any>(null);
+  const [pendingPlayerName, setPendingPlayerName] = useState<string>('');
 
   useEffect(() => {
     console.log('Attempting to connect to server...');
@@ -236,6 +237,8 @@ const UnoGame: React.FC = () => {
                 onModeSelect={(mode) => {
                   setSelectedGameMode(mode);
                   setShowGameModes(false);
+                  // Now create the room with the selected mode
+                  createRoom(pendingPlayerName);
                 }}
                 onCustomRules={setCustomRules}
               />
@@ -244,9 +247,8 @@ const UnoGame: React.FC = () => {
         ) : (
           <GameLobby 
             onCreateRoom={(name) => {
+              setPendingPlayerName(name);
               setShowGameModes(true);
-              setPlayerName(name);
-              // Don't create room yet, wait for game mode selection
             }}
             onJoinRoom={joinRoom}
             onSpectateGame={spectateGame}
