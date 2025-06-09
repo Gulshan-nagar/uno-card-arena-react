@@ -22,7 +22,7 @@ const PlayerHand: React.FC<PlayerHandProps> = ({
   topCard
 }) => {
   const isCardPlayable = (card: Card): boolean => {
-    if (!canPlay) return false;
+    if (!canPlay || !topCard) return false;
     
     if (gameState?.drawCount > 0) {
       return (card.type === 'action' && card.value === 'draw2') || 
