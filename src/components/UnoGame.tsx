@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
 import GameBoard from './GameBoard';
@@ -8,11 +9,10 @@ import WinnerModal from './WinnerModal';
 import ChatSystem from './ChatSystem';
 import SpectatorMode from './SpectatorMode';
 import GameHistory from './GameHistory';
-import PlayerProfile from './PlayerProfile';
 import GameModes from './GameModes';
 import ReconnectionHandler from './ReconnectionHandler';
 import { Card, GameState, Player } from '../types/uno';
-import { History, User, MessageCircle, Eye } from 'lucide-react';
+import { History, MessageCircle, Eye } from 'lucide-react';
 
 const UnoGame: React.FC = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -34,7 +34,6 @@ const UnoGame: React.FC = () => {
   const [isSpectator, setIsSpectator] = useState(false);
   const [spectators, setSpectators] = useState<Array<{ id: string; name: string }>>([]);
   const [showGameHistory, setShowGameHistory] = useState(false);
-  const [showPlayerProfile, setShowPlayerProfile] = useState(false);
   const [selectedGameMode, setSelectedGameMode] = useState('classic');
   const [showGameModes, setShowGameModes] = useState(false);
   const [customRules, setCustomRules] = useState<any>(null);
@@ -188,6 +187,7 @@ const UnoGame: React.FC = () => {
   };
 
   const callUno = async () => {
+    console.log('Calling UNO...');
     setIsLoading(true);
     socket?.emit('callUno');
     setIsLoading(false);
@@ -254,21 +254,6 @@ const UnoGame: React.FC = () => {
             onSpectateGame={spectateGame}
             error={error}
             onShowGameHistory={() => setShowGameHistory(true)}
-            onShowPlayerProfile={() => setShowPlayerProfile(true)}
-          />
-        )}
-        
-        {/* Show player profile modal */}
-        {showPlayerProfile && (
-          <PlayerProfile
-            playerId={socket?.id || ''}
-            playerName={playerName || 'Guest'}
-            isOwn={true}
-            isOpen={showPlayerProfile}
-            onClose={() => setShowPlayerProfile(false)}
-            onUpdateProfile={(data) => {
-              setPlayerName(data.name);
-            }}
           />
         )}
         
@@ -314,13 +299,6 @@ const UnoGame: React.FC = () => {
           title="Game Chat"
         >
           <MessageCircle size={20} />
-        </button>
-        <button
-          onClick={() => setShowPlayerProfile(true)}
-          className="w-10 h-10 bg-purple-500 hover:bg-purple-600 text-white rounded-full flex items-center justify-center shadow-lg"
-          title="Player Profile"
-        >
-          <User size={20} />
         </button>
         <button
           onClick={() => setShowGameHistory(true)}
@@ -478,17 +456,6 @@ const UnoGame: React.FC = () => {
           <WinnerModal 
             winnerName={winner}
             onClose={closeWinnerModal}
-          />
-        )}
-
-        {/* Player Profile Modal */}
-        {showPlayerProfile && (
-          <PlayerProfile
-            playerId={socket?.id || ''}
-            playerName={playerName}
-            isOwn={true}
-            isOpen={showPlayerProfile}
-            onClose={() => setShowPlayerProfile(false)}
           />
         )}
         

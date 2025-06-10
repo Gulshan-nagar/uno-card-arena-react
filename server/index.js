@@ -285,10 +285,19 @@ class UnoGame {
 
   callUno(playerId) {
     const player = this.players.find(p => p.id === playerId);
-    if (player && player.hand.length === 1) {
+    if (!player) {
+      console.log('Player not found for UNO call:', playerId);
+      return false;
+    }
+
+    // Allow UNO call if player has 2 or 1 cards (calling before playing the second-to-last card)
+    if (player.hand.length <= 2) {
       player.hasCalledUno = true;
+      console.log(`Player ${player.name} called UNO! Cards remaining: ${player.hand.length}`);
       return true;
     }
+    
+    console.log(`Player ${player.name} cannot call UNO with ${player.hand.length} cards`);
     return false;
   }
 
@@ -636,10 +645,19 @@ io.on('connection', (socket) => {
 
   socket.on('callUno', () => {
     const playerData = players.get(socket.id);
-    if (!playerData) return;
+    if (!playerData) {
+      console.log('No player data found for UNO call');
+      return;
+    }
 
     const game = gameRooms.get(playerData.roomId);
-    if (game && game.callUno(socket.id)) {
+    if (!game) {
+      console.log('No game found for UNO call');
+      return;
+    }
+
+    console.log(`Processing UNO call from ${playerData.playerName}`);
+    if (game.callUno(socket.id)) {
       io.to(playerData.roomId).emit('gameUpdate', game.getGameState());
       
       // Send system message
@@ -650,16 +668,25 @@ io.on('connection', (socket) => {
         timestamp: new Date()
       };
       
-      chatMessages.get(playerData.roomId).push(systemMessage);
+      if (chatMessages.has(playerData.roomId)) {
+        chatMessages.get(playerData.roomId).push(systemMessage);
+      }
       io.to(playerData.roomId).emit('systemMessage', systemMessage);
+    } else {
+      socket.emit('error', 'Cannot call UNO right now');
     }
   });
   
   socket.on('sendChatMessage', ({ roomId, message }) => {
+    console.log('Received chat message:', { roomId, message });
+    
     const playerData = players.get(socket.id);
     const spectatorData = spectators.get(socket.id);
     
-    if (!playerData && !spectatorData) return;
+    if (!playerData && !spectatorData) {
+      console.log('No player or spectator data found for chat');
+      return;
+    }
     
     // Check if chat exists for this room
     if (!chatMessages.has(roomId)) {
@@ -675,6 +702,8 @@ io.on('connection', (socket) => {
       timestamp: new Date(),
       type: 'chat'
     };
+    
+    console.log('Broadcasting chat message:', chatMessage);
     
     // Save message
     chatMessages.get(roomId).push(chatMessage);

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, MessageCircle } from 'lucide-react';
+import { Send, MessageCircle, X } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -33,22 +33,31 @@ const ChatSystem: React.FC<ChatSystemProps> = ({
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('chatMessage', (message: ChatMessage) => {
-      setMessages(prev => [...prev, message]);
-    });
+    const handleChatMessage = (message: ChatMessage) => {
+      console.log('Received chat message:', message);
+      setMessages(prev => [...prev, {
+        ...message,
+        timestamp: new Date(message.timestamp)
+      }]);
+    };
 
-    socket.on('systemMessage', (message: Omit<ChatMessage, 'playerId' | 'playerName'>) => {
+    const handleSystemMessage = (message: Omit<ChatMessage, 'playerId' | 'playerName'>) => {
+      console.log('Received system message:', message);
       setMessages(prev => [...prev, {
         ...message,
         playerId: 'system',
         playerName: 'System',
-        type: 'system'
+        type: 'system',
+        timestamp: new Date(message.timestamp)
       }]);
-    });
+    };
+
+    socket.on('chatMessage', handleChatMessage);
+    socket.on('systemMessage', handleSystemMessage);
 
     return () => {
-      socket.off('chatMessage');
-      socket.off('systemMessage');
+      socket.off('chatMessage', handleChatMessage);
+      socket.off('systemMessage', handleSystemMessage);
     };
   }, [socket]);
 
@@ -57,17 +66,19 @@ const ChatSystem: React.FC<ChatSystemProps> = ({
   }, [messages]);
 
   const sendMessage = () => {
-    if (!newMessage.trim() || !socket) return;
+    if (!newMessage.trim() || !socket || !roomId) {
+      console.log('Cannot send message:', { newMessage: newMessage.trim(), socket: !!socket, roomId });
+      return;
+    }
 
-    const message: Omit<ChatMessage, 'id'> = {
-      playerId: socket.id,
-      playerName,
-      message: newMessage.trim(),
-      timestamp: new Date(),
-      type: 'chat'
-    };
-
-    socket.emit('sendChatMessage', { roomId, message });
+    console.log('Sending chat message:', newMessage);
+    socket.emit('sendChatMessage', { 
+      roomId, 
+      message: {
+        message: newMessage.trim(),
+        timestamp: new Date()
+      }
+    });
     setNewMessage('');
   };
 
@@ -79,14 +90,7 @@ const ChatSystem: React.FC<ChatSystemProps> = ({
   };
 
   if (isCollapsed) {
-    return (
-      <button
-        onClick={onToggle}
-        className="fixed bottom-4 right-4 w-12 h-12 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all z-40"
-      >
-        <MessageCircle size={24} />
-      </button>
-    );
+    return null;
   }
 
   return (
@@ -97,14 +101,19 @@ const ChatSystem: React.FC<ChatSystemProps> = ({
           onClick={onToggle}
           className="text-gray-500 hover:text-gray-700"
         >
-          ×
+          <X size={20} />
         </button>
       </div>
       
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {messages.map((msg) => (
+        {messages.length === 0 && (
+          <div className="text-center text-gray-500 text-sm py-4">
+            No messages yet. Start chatting!
+          </div>
+        )}
+        {messages.map((msg, index) => (
           <div
-            key={msg.id}
+            key={msg.id || index}
             className={`p-2 rounded-lg ${
               msg.type === 'system'
                 ? 'bg-gray-100 text-gray-600 text-center text-sm'
