@@ -1,3 +1,4 @@
+
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -31,7 +32,6 @@ app.use(express.json());
 // Game state storage (in production, use MongoDB)
 const gameRooms = new Map();
 const players = new Map();
-const spectators = new Map();
 const gameHistory = new Map();
 const chatMessages = new Map();
 
@@ -40,7 +40,6 @@ class UnoGame {
   constructor(roomId, gameMode = 'classic', customRules = null) {
     this.roomId = roomId;
     this.players = [];
-    this.spectators = [];
     this.deck = [];
     this.discardPile = [];
     this.currentPlayer = 0;
@@ -132,18 +131,6 @@ class UnoGame {
     return true;
   }
 
-  addSpectator(spectatorId, spectatorName) {
-    this.spectators.push({
-      id: spectatorId,
-      name: spectatorName
-    });
-    return true;
-  }
-
-  removeSpectator(spectatorId) {
-    this.spectators = this.spectators.filter(spec => spec.id !== spectatorId);
-  }
-
   startGame() {
     if (this.players.length < 2) return false;
     
@@ -164,7 +151,6 @@ class UnoGame {
     this.gameStarted = true;
     this.startTime = new Date();
     
-    // Send a system message
     return true;
   }
 
@@ -355,18 +341,13 @@ class UnoGame {
       gameStarted: this.gameStarted,
       winner: this.winner,
       drawCount: this.drawCount,
-      gameMode: this.gameMode,
-      spectatorCount: this.spectators.length
+      gameMode: this.gameMode
     };
   }
 
   getPlayerHand(playerId) {
     const player = this.players.find(p => p.id === playerId);
     return player ? player.hand : [];
-  }
-
-  getSpectators() {
-    return this.spectators;
   }
 }
 
@@ -443,103 +424,6 @@ io.on('connection', (socket) => {
     } catch (error) {
       console.error('Error joining room:', error);
       socket.emit('error', 'Failed to join room');
-    }
-  });
-
-  socket.on('spectateGame', ({ roomId, spectatorName }) => {
-    try {
-      console.log('User', spectatorName, 'attempting to spectate room:', roomId);
-      const game = gameRooms.get(roomId);
-      if (!game) {
-        console.log('Room not found:', roomId);
-        socket.emit('error', 'Room not found');
-        return;
-      }
-
-      game.addSpectator(socket.id, spectatorName);
-      spectators.set(socket.id, { roomId, spectatorName });
-      socket.join(roomId);
-      
-      console.log('Spectator joined successfully:', spectatorName, 'to room:', roomId);
-      
-      // Send game state to spectator
-      socket.emit('gameUpdate', game.getGameState());
-      
-      // Update spectator list for all clients in the room
-      io.to(roomId).emit('spectatorsUpdate', game.getSpectators());
-      
-      // Send system message
-      const systemMessage = {
-        id: uuidv4(),
-        type: 'system',
-        message: `${spectatorName} is now spectating`,
-        timestamp: new Date()
-      };
-      
-      chatMessages.get(roomId).push(systemMessage);
-      io.to(roomId).emit('systemMessage', systemMessage);
-    } catch (error) {
-      console.error('Error spectating game:', error);
-      socket.emit('error', 'Failed to spectate game');
-    }
-  });
-
-  socket.on('toggleSpectate', ({ roomId, playerName, spectate }) => {
-    try {
-      const game = gameRooms.get(roomId);
-      if (!game) return;
-      
-      if (spectate) {
-        // Player -> Spectator
-        const playerIndex = game.players.findIndex(p => p.id === socket.id);
-        if (playerIndex === -1) return;
-        
-        // Remove from players
-        game.players.splice(playerIndex, 1);
-        players.delete(socket.id);
-        
-        // Add as spectator
-        game.addSpectator(socket.id, playerName);
-        spectators.set(socket.id, { roomId, spectatorName: playerName });
-        
-        // Update game state
-        if (game.currentPlayer === playerIndex) {
-          game.currentPlayer = game.currentPlayer % game.players.length;
-        }
-      } else {
-        // Spectator -> Player
-        if (game.players.length >= 4) {
-          socket.emit('error', 'Game is full');
-          return;
-        }
-        
-        // Remove from spectators
-        game.removeSpectator(socket.id);
-        spectators.delete(socket.id);
-        
-        // Add as player
-        game.addPlayer(socket.id, playerName);
-        players.set(socket.id, { roomId, playerName });
-      }
-      
-      // Update all clients
-      io.to(roomId).emit('gameUpdate', game.getGameState());
-      io.to(roomId).emit('spectatorsUpdate', game.getSpectators());
-      
-      // Send system message
-      const systemMessage = {
-        id: uuidv4(),
-        type: 'system',
-        message: spectate 
-          ? `${playerName} is now spectating` 
-          : `${playerName} joined the game as a player`,
-        timestamp: new Date()
-      };
-      
-      chatMessages.get(roomId).push(systemMessage);
-      io.to(roomId).emit('systemMessage', systemMessage);
-    } catch (error) {
-      console.error('Error toggling spectate mode:', error);
     }
   });
 
@@ -681,10 +565,9 @@ io.on('connection', (socket) => {
     console.log('Received chat message:', { roomId, message });
     
     const playerData = players.get(socket.id);
-    const spectatorData = spectators.get(socket.id);
     
-    if (!playerData && !spectatorData) {
-      console.log('No player or spectator data found for chat');
+    if (!playerData) {
+      console.log('No player data found for chat');
       return;
     }
     
@@ -697,7 +580,7 @@ io.on('connection', (socket) => {
     const chatMessage = {
       id: uuidv4(),
       playerId: socket.id,
-      playerName: playerData ? playerData.playerName : spectatorData.spectatorName,
+      playerName: playerData.playerName,
       message: message.message,
       timestamp: new Date(),
       type: 'chat'

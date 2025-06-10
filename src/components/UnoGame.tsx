@@ -7,12 +7,11 @@ import GameLobby from './GameLobby';
 import Tutorial from './Tutorial';
 import WinnerModal from './WinnerModal';
 import ChatSystem from './ChatSystem';
-import SpectatorMode from './SpectatorMode';
 import GameHistory from './GameHistory';
 import GameModes from './GameModes';
 import ReconnectionHandler from './ReconnectionHandler';
 import { Card, GameState, Player } from '../types/uno';
-import { History, MessageCircle, Eye } from 'lucide-react';
+import { History, MessageCircle } from 'lucide-react';
 
 const UnoGame: React.FC = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -29,10 +28,8 @@ const UnoGame: React.FC = () => {
   const [adminId, setAdminId] = useState<string>('');
   const [winner, setWinner] = useState<string | null>(null);
   
-  // New feature states
+  // Feature states
   const [isChatCollapsed, setIsChatCollapsed] = useState(true);
-  const [isSpectator, setIsSpectator] = useState(false);
-  const [spectators, setSpectators] = useState<Array<{ id: string; name: string }>>([]);
   const [showGameHistory, setShowGameHistory] = useState(false);
   const [selectedGameMode, setSelectedGameMode] = useState('classic');
   const [showGameModes, setShowGameModes] = useState(false);
@@ -104,10 +101,6 @@ const UnoGame: React.FC = () => {
       setWinner(winnerName);
     });
 
-    newSocket.on('spectatorsUpdate', (spectatorList: Array<{ id: string; name: string }>) => {
-      setSpectators(spectatorList);
-    });
-
     return () => {
       console.log('Cleaning up socket connection');
       newSocket.close();
@@ -135,20 +128,6 @@ const UnoGame: React.FC = () => {
     setIsLoading(true);
     setPlayerName(name);
     socket?.emit('joinRoom', { roomId, playerName: name });
-    setIsInGame(true);
-    setIsLoading(false);
-  };
-
-  const spectateGame = async (roomId: string, name: string) => {
-    console.log('Spectating room:', roomId, 'with name:', name);
-    if (!isConnected) {
-      setError('Not connected to server. Please refresh and try again.');
-      return;
-    }
-    setIsLoading(true);
-    setPlayerName(name);
-    setIsSpectator(true);
-    socket?.emit('spectateGame', { roomId, spectatorName: name });
     setIsInGame(true);
     setIsLoading(false);
   };
@@ -251,7 +230,6 @@ const UnoGame: React.FC = () => {
               setShowGameModes(true);
             }}
             onJoinRoom={joinRoom}
-            onSpectateGame={spectateGame}
             error={error}
             onShowGameHistory={() => setShowGameHistory(true)}
           />
@@ -307,22 +285,6 @@ const UnoGame: React.FC = () => {
         >
           <History size={20} />
         </button>
-        {!isSpectator && (
-          <button
-            onClick={() => {
-              socket?.emit('toggleSpectate', {
-                roomId,
-                playerName,
-                spectate: true
-              });
-              setIsSpectator(true);
-            }}
-            className="w-10 h-10 bg-yellow-500 hover:bg-yellow-600 text-white rounded-full flex items-center justify-center shadow-lg"
-            title="Switch to Spectator"
-          >
-            <Eye size={20} />
-          </button>
-        )}
       </div>
       
       <div className="max-w-6xl mx-auto relative z-10">
@@ -360,7 +322,7 @@ const UnoGame: React.FC = () => {
               )}
             </div>
 
-            {gameState.gameStarted && !isSpectator && (
+            {gameState.gameStarted && (
               <>
                 <GameBoard 
                   gameState={gameState}
@@ -379,14 +341,6 @@ const UnoGame: React.FC = () => {
                   topCard={gameState.topCard}
                 />
               </>
-            )}
-
-            {gameState.gameStarted && isSpectator && (
-              <SpectatorMode
-                gameState={gameState}
-                spectators={spectators}
-                currentPlayerId={socket?.id}
-              />
             )}
 
             {!gameState.gameStarted && (

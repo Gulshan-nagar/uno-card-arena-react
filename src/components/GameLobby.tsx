@@ -1,229 +1,125 @@
-
-import React, { useState } from 'react';
-import { User, Users, Eye, History } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 
 interface GameLobbyProps {
   onCreateRoom: (name: string) => void;
   onJoinRoom: (roomId: string, name: string) => void;
-  onSpectateGame?: (roomId: string, name: string) => void; 
   error: string;
-  onShowGameHistory?: () => void;
-  onShowPlayerProfile?: () => void;
+  onShowGameHistory: () => void;
 }
 
 const GameLobby: React.FC<GameLobbyProps> = ({
   onCreateRoom,
   onJoinRoom,
-  onSpectateGame,
   error,
-  onShowGameHistory,
-  onShowPlayerProfile
+  onShowGameHistory
 }) => {
-  const [playerName, setPlayerName] = useState('');
-  const [roomId, setRoomId] = useState('');
-  const [activeTab, setActiveTab] = useState<'create' | 'join' | 'spectate'>('create');
-  const [isNameValid, setIsNameValid] = useState<boolean>(true);
-  const [isRoomIdValid, setIsRoomIdValid] = useState<boolean>(true);
+  const [createName, setCreateName] = useState('');
+  const [joinName, setJoinName] = useState('');
+  const [roomCode, setRoomCode] = useState('');
 
-  const validateName = (name: string): boolean => {
-    return name.trim().length >= 2 && name.trim().length <= 20;
-  };
-
-  const validateRoomId = (id: string): boolean => {
-    return /^[A-Z0-9]{6}$/.test(id);
-  };
+  const isCreateNameValid = createName.trim() !== '';
+  const isJoinNameValid = joinName.trim() !== '';
+  const isRoomCodeValid = roomCode.trim() !== '' && roomCode.length === 6;
+  const isJoinFormValid = isJoinNameValid && isRoomCodeValid;
 
   const handleCreateRoom = () => {
-    if (validateName(playerName)) {
-      onCreateRoom(playerName);
-    } else {
-      setIsNameValid(false);
+    if (isCreateNameValid) {
+      onCreateRoom(createName);
     }
   };
 
   const handleJoinRoom = () => {
-    if (validateName(playerName) && validateRoomId(roomId)) {
-      onJoinRoom(roomId, playerName);
-    } else {
-      setIsNameValid(validateName(playerName));
-      setIsRoomIdValid(validateRoomId(roomId));
-    }
-  };
-
-  const handleSpectateGame = () => {
-    if (validateName(playerName) && validateRoomId(roomId) && onSpectateGame) {
-      onSpectateGame(roomId, playerName);
-    } else {
-      setIsNameValid(validateName(playerName));
-      setIsRoomIdValid(validateRoomId(roomId));
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      if (activeTab === 'create') {
-        handleCreateRoom();
-      } else if (activeTab === 'join') {
-        handleJoinRoom();
-      } else if (activeTab === 'spectate') {
-        handleSpectateGame();
-      }
+    if (isJoinFormValid) {
+      onJoinRoom(roomCode, joinName);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
-      <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 max-w-md w-full border border-white/20">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 p-4 flex items-center justify-center">
+      <div className="max-w-2xl w-full">
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-2 drop-shadow-lg">🎮 UNO Arena 🎮</h1>
-          <p className="text-white/80">Ready to play the classic card game online?</p>
-        </div>
-        
-        {/* Tabs */}
-        <div className="flex rounded-lg bg-white/5 p-1 mb-6">
-          <button
-            onClick={() => setActiveTab('create')}
-            className={`flex-1 py-2 px-4 rounded-md transition-colors flex items-center justify-center gap-2 ${
-              activeTab === 'create'
-                ? 'bg-blue-500 text-white'
-                : 'text-white/70 hover:text-white'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            Create
-          </button>
-          <button
-            onClick={() => setActiveTab('join')}
-            className={`flex-1 py-2 px-4 rounded-md transition-colors flex items-center justify-center gap-2 ${
-              activeTab === 'join'
-                ? 'bg-blue-500 text-white'
-                : 'text-white/70 hover:text-white'
-            }`}
-          >
-            <User className="w-4 h-4" />
-            Join
-          </button>
-          <button
-            onClick={() => setActiveTab('spectate')}
-            className={`flex-1 py-2 px-4 rounded-md transition-colors flex items-center justify-center gap-2 ${
-              activeTab === 'spectate'
-                ? 'bg-blue-500 text-white'
-                : 'text-white/70 hover:text-white'
-            }`}
-          >
-            <Eye className="w-4 h-4" />
-            Spectate
-          </button>
+          <h1 className="text-6xl font-bold text-white mb-4 drop-shadow-lg">🎮 UNO Arena 🎮</h1>
+          <p className="text-white/80 text-xl">The Ultimate Online UNO Experience</p>
         </div>
 
-        {/* Name Field (common to all tabs) */}
-        <div className="mb-4">
-          <label className="block text-white mb-2 font-medium">Your Name</label>
-          <input
-            type="text"
-            value={playerName}
-            onChange={(e) => {
-              setPlayerName(e.target.value);
-              setIsNameValid(true);
-            }}
-            onKeyPress={handleKeyPress}
-            maxLength={20}
-            placeholder="Enter your name"
-            className={`w-full px-4 py-3 rounded-lg bg-white/5 text-white border ${
-              isNameValid ? 'border-white/20' : 'border-red-400'
-            } focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-white/40`}
-          />
-          {!isNameValid && (
-            <p className="text-red-300 text-sm mt-1">
-              Name should be between 2-20 characters
-            </p>
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/80 text-white rounded-lg backdrop-blur-sm border border-red-400 font-semibold">
+              {error}
+            </div>
           )}
-        </div>
 
-        {/* Room ID Field (only for join/spectate) */}
-        {(activeTab === 'join' || activeTab === 'spectate') && (
-          <div className="mb-4">
-            <label className="block text-white mb-2 font-medium">Room Code</label>
-            <input
-              type="text"
-              value={roomId}
-              onChange={(e) => {
-                setRoomId(e.target.value.toUpperCase());
-                setIsRoomIdValid(true);
-              }}
-              onKeyPress={handleKeyPress}
-              placeholder="Enter 6-digit code"
-              maxLength={6}
-              className={`w-full px-4 py-3 rounded-lg bg-white/5 text-white border ${
-                isRoomIdValid ? 'border-white/20' : 'border-red-400'
-              } focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-white/40 uppercase`}
-            />
-            {!isRoomIdValid && (
-              <p className="text-red-300 text-sm mt-1">
-                Room code should be 6 alphanumeric characters
-              </p>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Create Room Section */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-white mb-4 text-center">🚀 Create New Game</h2>
+              <input
+                type="text"
+                placeholder="Enter your name"
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-yellow-400 backdrop-blur-sm"
+                maxLength={20}
+              />
+              <button
+                onClick={handleCreateRoom}
+                disabled={!isCreateNameValid}
+                className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-lg hover:from-green-600 hover:to-green-700 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:hover:scale-100"
+              >
+                Create Room 🎲
+              </button>
+            </div>
+
+            {/* Join Room Section */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-white mb-4 text-center">🎯 Join Existing Game</h2>
+              <input
+                type="text"
+                placeholder="Enter your name"
+                value={joinName}
+                onChange={(e) => setJoinName(e.target.value)}
+                className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-yellow-400 backdrop-blur-sm"
+                maxLength={20}
+              />
+              <input
+                type="text"
+                placeholder="Enter room code (e.g., ABC123)"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                className="w-full px-4 py-3 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-yellow-400 backdrop-blur-sm font-mono"
+                maxLength={6}
+              />
+              <button
+                onClick={handleJoinRoom}
+                disabled={!isJoinFormValid}
+                className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-blue-700 disabled:from-gray-500 disabled:to-gray-600 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:hover:scale-100"
+              >
+                Join Room 🎪
+              </button>
+            </div>
           </div>
-        )}
 
-        {/* Action Button */}
-        {activeTab === 'create' && (
-          <button
-            onClick={handleCreateRoom}
-            className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg mt-4"
-          >
-            Create New Game
-          </button>
-        )}
-
-        {activeTab === 'join' && (
-          <button
-            onClick={handleJoinRoom}
-            className="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-300 shadow-lg mt-4"
-          >
-            Join Game
-          </button>
-        )}
-
-        {activeTab === 'spectate' && (
-          <button
-            onClick={handleSpectateGame}
-            className="w-full px-4 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-bold rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300 shadow-lg mt-4"
-          >
-            Spectate Game
-          </button>
-        )}
-
-        {/* Additional Options */}
-        <div className="mt-6 flex justify-center gap-4">
-          {onShowPlayerProfile && (
-            <button
-              onClick={onShowPlayerProfile}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors"
-            >
-              <User className="w-4 h-4" />
-              Profile
-            </button>
-          )}
-          
-          {onShowGameHistory && (
+          {/* Game History Button */}
+          <div className="mt-8 text-center">
             <button
               onClick={onShowGameHistory}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors"
+              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
-              <History className="w-4 h-4" />
-              History
+              📊 View Game History
             </button>
-          )}
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="mt-6 p-3 bg-red-500/80 border border-red-400 text-white rounded-lg backdrop-blur-sm">
-            {error}
           </div>
-        )}
+
+          {/* Game Rules */}
+          <div className="mt-8 p-4 bg-white/5 rounded-lg border border-white/10">
+            <h3 className="text-lg font-semibold text-white mb-2">🎯 Quick Rules:</h3>
+            <ul className="text-white/80 text-sm space-y-1">
+              <li>• Match cards by color or number</li>
+              <li>• Use action cards strategically</li>
+              <li>• Call "UNO" when you have one card left!</li>
+              <li>• First player to empty their hand wins</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );
